@@ -1,6 +1,76 @@
----------------------
-    Quick Start
----------------------
+GFClassify was developed to classify sequences into categories, published in CITATION
+
+Copyright 2012 Ribosomal Database Project
+This project is distributed under the terms of the GNU GPLv3
+
+---
+
+The program uses Interpolated Context Models trained with a set of categorized sequences, to determine the categories of an input set of sequences.
+
+This program requires:
+ Glimmer 3.0
+ an installation of BioPython
+
+
+-------------------
+   Directories
+-------------------
+
+src/      - Contains the source for GFClassify (score.cc and score.h) and a 
+   	    make file to build the tool.  
+models/   - Models included with GFClassify, currently amoA, pmoA, nifH 1-5
+scripts/  - Helper scripts for testing models and processing GFClassify result
+	    files (biopython required for some scripts)
+examples/ - Contains example sequence files
+
+ 
+------------------
+     BUILDING
+------------------
+
+Prep:
+-------
+To build gf_classify, first download Glimmer 3.0 from their website 
+(http://www.cbcb.umd.edu/software/glimmer/) and 
+edit the file src/Makefile.  Alter the glimmer_dir to point to the
+directory where Glimmer was extracted.  Type 'make' inside the src/ 
+directory.  Should compile on any platform with gcc.
+
+Information on BioPython
+
+Compiling:
+------------
+
+(1) Unpack the files with tar ...
+
+(2) Change the Makefile to show where your installation will be.
+
+Edit 'Makefile' in the src/ directory
+
+Change the glimmer_dir variable to the path where the Glimmer installation is
+
+e.g. /home/user/glimmer3.02/
+
+If you're not sure what the path is, at the command line, go into the
+directory where you have installed Glimmer.  Then type 'pwd' The output
+of that command is the path of your cd-hit directory.
+
+(3) In the src/ directory and type 'make' to compile gf_classify.  The binary 
+will be in the src directory (src/gf_classify).  
+
+   cd src && make
+
+No install option is included, you can run gf_classify from the src 
+directory or copy the  executable to a directory on your path 
+(ex: /usr/local/bin), or modify your path to include the src directory.
+
+NOTE: Building gf_classify will trigger a build of Glimmer, if for
+some reason Glimmer compilation fails the gf_classify build will
+fail too.
+
+-----------------------
+	Example/Testing
+-----------------------
 1. cd to the root of the gf_classify directory
 2. Run GFClassify
 
@@ -12,7 +82,7 @@
    results can be redirected to file with the > operator on the command line.
 3. Summarizing results:
          
-        cut -f 6 gf_classify.txt | sort | uniq -c
+        cut -f 7 gf_classify.txt | sort | uniq -c
 
       The output should be (with the header value 'label' omitted)
        984 amoa
@@ -26,50 +96,21 @@
    This will create one file per label in the current direcotry containing
    all sequences with that label.
 
--------------------
-   Directories
--------------------
-
-src/      - Contains the source for GFClassify (score.cc and score.h) and a make file to build the tool.  
-            In order to build GFClassify you must download Glimmer 3.0 from their website 
-            (http://www.cbcb.umd.edu/software/glimmer/) and edit the Makefile to point to the directory 
-	    where Glimmer was extracted to.  Should compile on any platform with gcc (type make inside
-	    the src directory).	   
-models/   - Models included with GFClassify, currently amoA, pmoA, nifH 1-5
-scripts/  - Helper scripts for testing models and processing GFClassify result files (biopython required for some scripts)
-examples/ - Contains example sequence files
-
-------------------
-     BUILDING
-------------------
-
-Prep:
--------
-To build gf_classify first download Glimmer 3.0 from their website and 
-edit the file src/Makefile, alter the glimmer_dir to point to glimmer
-root directory.
-
-Compiling:
-------------
-Change to the src dir and type make to compile gf_classify.  The binary 
-will be in the src directory (src/gf_classify).  
-
-   cd src && make
-
-No install option is included, you can run gf_classify from the src 
-directory or copy the  executable to a directory on your path 
-(ex: /usr/local/bin), or modify your path to include the src directory.
-
-NOTE: Building gf_classify will trigger a build of Glimmer, if for
-some reason Glimmer compilation fails the gf_classify build will
-fail too.
 
 --------------------
   Using GFClassify
 --------------------
 
+
 Using gf_classify:
 -------------------
+
+gf_classify requires one or more Interpolated Context Models (ICMs) to 
+categorize a set of input sequences.
+
+ICMs can be created using Glimmer and a training set for each category 
+of interest.  See Glimmer documentation for more
+information.
 
 When run with no arguments (or -h) gf_classify will output a brief usage
 message.
@@ -80,18 +121,32 @@ The command line program takes a sequence file (in fasta format) and one
 or more ICMs on the command line.  If <seq_file> is - gf_classify will
 read sequences from stdin instead of from file.
 
-Users may specify a classification  threshold (log likelihood must be >= 
-thresh otherwise reject the input sequence) with the -t option.  The 
--c option tells gf_classify to consider the reverse complement of the 
-input sequences.
+[options]
+
+-t	log likelihood threshold cutoff.  Log likelihook must be greater 
+	than or equal to the threshold, otherwise the input sequence is 
+	rejected. 
+	(more explation of what this is and how to calculate it)
+-c 	consider both the forward and reverse complement of the sequence
+
+
+--
+
+Output is written to standard out.  The first line (starting with a #) contains the column headers.  The first three columns in every output will be the query sequence id, sequence description and predicted orientation (+/-).  Then there is one column for each input ICM listing the nats score of the query when tested against that model. If more than one ICM is used the last column will contain the label with the highest probability.
 
 All probabilities are reported in nats (log base e).
 
+The included sort_results.py script can be used to sort query sequences in to fasta files based on predicted gene label.
 
 Building ICMs:
 ---------------
 
 ICMs for GFClassify are built using the build-icm program in the Glimmer
-package.  We recommend using a periodicy of 1 (-p 1) with build-icm.
+package.
+
+The included grid_search.py script can be used to find optimal values for window width, depth, and periodicy given two or more sets of training sequences.  The script takes a list of values for each parameter to test the error rate with n-fold cross validation (specified by the -k argument).
+
+We recommend --window 8,9,10,11,12,13,14,15 --depth 7,8,9 --period 1.
 
 For more detailed help see the Glimmer 3 documentation.
+http://www.cbcb.umd.edu/software/glimmer/glim302notes.pdf
